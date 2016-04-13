@@ -209,6 +209,8 @@ boolean AccelStepper::runStepBuffer()
 					_currentPos -= 1;
 				}
 			}
+			else
+				return 0;
 		}
 		uint16_t stepInterval;
 		uint8_t direction;
@@ -228,7 +230,7 @@ boolean AccelStepper::runStepBuffer()
 		}
 		push(_step_buffer, stepInterval, direction);
 	}
-	return _speed != 0.0 || distanceToGo() != 0;
+	return 1;
 }
 
 AccelStepper::AccelStepper(uint8_t interface, uint8_t pin1, uint8_t pin2, uint8_t pin3, uint8_t pin4, bool enable)
