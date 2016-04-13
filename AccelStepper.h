@@ -236,9 +236,11 @@
 #include <WProgram.h>
 #include <wiring.h>
 #endif
-
+#include "CircularStepBuffer.h"
 // These defs cause trouble on some versions of Arduino
 #undef round
+
+#define TIMER_RESOLUTION 2000000.0
 
 /////////////////////////////////////////////////////////////////////
 /// \class AccelStepper AccelStepper.h <AccelStepper.h>
@@ -294,9 +296,10 @@ public:
 	DRIVER    = 1, ///< Stepper Driver, 2 driver pins required
 	FULL2WIRE = 2, ///< 2 wire stepper, 2 motor pins required
 	FULL3WIRE = 3, ///< 3 wire stepper, such as HDD spindle, 3 motor pins required
-        FULL4WIRE = 4, ///< 4 wire full stepper, 4 motor pins required
+	FULL4WIRE = 4, ///< 4 wire full stepper, 4 motor pins required
 	HALF3WIRE = 6, ///< 3 wire half stepper, such as HDD spindle, 3 motor pins required
-	HALF4WIRE = 8  ///< 4 wire half stepper, 4 motor pins required
+	HALF4WIRE = 8,  ///< 4 wire half stepper, 4 motor pins required
+	STEPBUFFER = 9  ///< 4 wire half stepper, 4 motor pins required
     } MotorInterfaceType;
 
     /// Constructor. You can have multiple simultaneous steppers, all moving
@@ -340,6 +343,8 @@ public:
     /// \param[in] backward void-returning procedure that will make a backward step
     AccelStepper(void (*forward)(), void (*backward)());
     
+    AccelStepper(struct CBuffer * step_buffer);
+
     /// Set the target position. The run() function will try to move the motor (at most one step per call)
     /// from the current position to the target position set by the most
     /// recent call to this function. Caution: moveTo() also recalculates the speed for the next step. 
@@ -360,6 +365,7 @@ public:
     /// based on the current speed and the time since the last step.
     /// \return true if the motor is still running to the target position.
     boolean run();
+    boolean runStepBuffer();
 
     /// Poll the motor and step it if a step is due, implementing a constant
     /// speed as set by the most recent call to setSpeed(). You must call this as
@@ -644,6 +650,8 @@ private:
 
     /// Current direction motor is spinning in
     boolean _direction; // 1 == CW
+
+    struct CBuffer * _step_buffer;
 
 };
 

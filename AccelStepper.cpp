@@ -161,7 +161,7 @@ void AccelStepper::computeNewSpeed()
     }
     _n++;
     _stepInterval = _cn;
-    _speed = 1000000.0 / _cn;
+    _speed = TIMER_RESOLUTION / _cn;
     if (_direction == DIRECTION_CCW)
 	_speed = -_speed;
 
@@ -187,6 +187,48 @@ boolean AccelStepper::run()
     if (runSpeed())
 	computeNewSpeed();
     return _speed != 0.0 || distanceToGo() != 0;
+}
+
+boolean AccelStepper::runStepBuffer()
+{
+	if (!is_full(_step_buffer))
+	{
+		if (_stepInterval == 0)
+		{
+			computeNewSpeed();
+			if (_stepInterval != 0)
+			{
+				if (_direction == DIRECTION_CW)
+				{
+					// Clockwise
+					_currentPos += 1;
+				}
+				else
+				{
+					// Anticlockwise
+					_currentPos -= 1;
+				}
+			}
+		}
+		uint16_t stepInterval;
+		uint8_t direction;
+		if (_stepInterval <= 0xFFFF) {
+			stepInterval = _stepInterval;
+			if (_stepInterval == 0)
+				direction = 255;
+			else
+				direction = _direction;
+			_stepInterval = 0;
+		}
+		else
+		{
+			_stepInterval -= 0xDFFF;
+			stepInterval = 0xDFFF;
+			direction = 255;
+		}
+		push(_step_buffer, stepInterval, direction);
+	}
+	return _speed != 0.0 || distanceToGo() != 0;
 }
 
 AccelStepper::AccelStepper(uint8_t interface, uint8_t pin1, uint8_t pin2, uint8_t pin3, uint8_t pin4, bool enable)
@@ -257,12 +299,46 @@ AccelStepper::AccelStepper(void (*forward)(), void (*backward)())
     setAcceleration(1);
 }
 
+AccelStepper::AccelStepper(struct CBuffer * step_buffer)
+{
+    _interface = STEPBUFFER;
+    _currentPos = 0;
+    _targetPos = 0;
+    _speed = 0.0;
+    _maxSpeed = 1.0;
+    _acceleration = 0.0;
+    _sqrt_twoa = 1.0;
+    _stepInterval = 0;
+    _minPulseWidth = 1;
+    _enablePin = 0xff;
+    _lastStepTime = 0;
+    _pin[0] = 0;
+    _pin[1] = 0;
+    _pin[2] = 0;
+    _pin[3] = 0;
+    _step_buffer = step_buffer;
+    init_c_buffer(step_buffer);
+
+    // NEW
+    _n = 0;
+    _c0 = 0.0;
+    _cn = 0.0;
+    _cmin = 1.0;
+    _direction = DIRECTION_CCW;
+
+    int i;
+    for (i = 0; i < 4; i++)
+	_pinInverted[i] = 0;
+    // Some reasonable default
+    setAcceleration(1);
+}
+
 void AccelStepper::setMaxSpeed(float speed)
 {
     if (_maxSpeed != speed)
     {
 	_maxSpeed = speed;
-	_cmin = 1000000.0 / speed;
+	_cmin = TIMER_RESOLUTION / speed;
 	// Recompute _n from current speed and adjust speed if accelerating or cruising
 	if (_n > 0)
 	{
@@ -286,7 +362,7 @@ void AccelStepper::setAcceleration(float acceleration)
 	// Recompute _n per Equation 17
 	_n = _n * (_acceleration / acceleration);
 	// New c0 per Equation 7, with correction per Equation 15
-	_c0 = 0.676 * sqrt(2.0 / acceleration) * 1000000.0; // Equation 15
+	_c0 = 0.676 * sqrt(2.0 / acceleration) * TIMER_RESOLUTION; // Equation 15
 	_acceleration = acceleration;
 	computeNewSpeed();
     }
@@ -301,7 +377,7 @@ void AccelStepper::setSpeed(float speed)
 	_stepInterval = 0;
     else
     {
-	_stepInterval = fabs(1000000.0 / speed);
+	_stepInterval = fabs(TIMER_RESOLUTION / speed);
 	_direction = (speed > 0.0) ? DIRECTION_CW : DIRECTION_CCW;
     }
     _speed = speed;
