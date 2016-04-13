@@ -522,6 +522,8 @@ protected:
     /// output pins directly
     virtual void   setOutputPins(uint8_t mask);
 
+    void pushStep(unsigned long &stepinterval);
+
     /// Called to execute a step. Only called when a new step is
     /// required. Subclasses may override to implement new stepping
     /// interfaces. The default calls step1(), step2(), step4() or step8() depending on the
@@ -611,6 +613,7 @@ private:
     /// The current interval between steps in microseconds.
     /// 0 means the motor is currently stopped with _speed == 0
     unsigned long  _stepInterval;
+    unsigned long  _halfstepInterval;
 
     /// The last step time in microseconds
     unsigned long  _lastStepTime;

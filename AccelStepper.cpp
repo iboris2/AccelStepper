@@ -25,7 +25,7 @@ void AccelStepper::moveTo(long absolute)
     if (_targetPos != absolute)
     {
 	_targetPos = absolute;
-	computeNewSpeed();
+	//computeNewSpeed();
 	// compute new n?
     }
 }
@@ -198,6 +198,8 @@ boolean AccelStepper::runStepBuffer()
 			computeNewSpeed();
 			if (_stepInterval != 0)
 			{
+				_halfstepInterval = _stepInterval/2;
+				_stepInterval -= _halfstepInterval;
 				if (_direction == DIRECTION_CW)
 				{
 					// Clockwise
@@ -212,25 +214,36 @@ boolean AccelStepper::runStepBuffer()
 			else
 				return 0;
 		}
-		uint16_t stepInterval;
-		uint8_t direction;
-		if (_stepInterval <= 0xFFFF) {
-			stepInterval = _stepInterval;
-			if (_stepInterval == 0)
-				direction = 255;
-			else
-				direction = _direction;
-			_stepInterval = 0;
-		}
-		else
+
+		if (_halfstepInterval != 0)
 		{
-			_stepInterval -= 0xDFFF;
-			stepInterval = 0xDFFF;
-			direction = 255;
+			pushStep(_halfstepInterval);
 		}
-		push(_step_buffer, stepInterval, direction);
+		else if (_stepInterval != 0)
+		{
+			pushStep(_stepInterval);
+		}
+
 	}
 	return 1;
+}
+
+void AccelStepper::pushStep(unsigned long &stepInterval)
+{
+	uint16_t stepInterval_16;
+	uint8_t direction;
+	if (stepInterval <= 0xFFFF) {
+		stepInterval_16 = stepInterval;
+		direction = _direction;
+		stepInterval = 0;
+	}
+	else
+	{
+		stepInterval -= 0xDFFF;
+		stepInterval_16 = 0xDFFF;
+		direction = 255;
+	}
+	push(_step_buffer, stepInterval_16, direction);
 }
 
 AccelStepper::AccelStepper(uint8_t interface, uint8_t pin1, uint8_t pin2, uint8_t pin3, uint8_t pin4, bool enable)
@@ -311,6 +324,7 @@ AccelStepper::AccelStepper(struct CBuffer * step_buffer)
     _acceleration = 0.0;
     _sqrt_twoa = 1.0;
     _stepInterval = 0;
+    _halfstepInterval = 0;
     _minPulseWidth = 1;
     _enablePin = 0xff;
     _lastStepTime = 0;
@@ -345,7 +359,7 @@ void AccelStepper::setMaxSpeed(float speed)
 	if (_n > 0)
 	{
 	    _n = (long)((_speed * _speed) / (2.0 * _acceleration)); // Equation 16
-	    computeNewSpeed();
+	    //computeNewSpeed();
 	}
     }
 }
@@ -366,7 +380,7 @@ void AccelStepper::setAcceleration(float acceleration)
 	// New c0 per Equation 7, with correction per Equation 15
 	_c0 = 0.676 * sqrt(2.0 / acceleration) * TIMER_RESOLUTION; // Equation 15
 	_acceleration = acceleration;
-	computeNewSpeed();
+	//computeNewSpeed();
     }
 }
 
