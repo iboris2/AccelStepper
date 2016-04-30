@@ -357,6 +357,11 @@ public:
     /// \param[in] relative The desired position relative to the current position. Negative is
     /// anticlockwise from the current position.
     void    move(long relative);
+    
+    /// Set the target position relative to the current target
+    /// \param[in] relative The desired position relative to the current target. Negative is
+    /// anticlockwise from the current target.   
+    void updateMove(long relative);
 
     /// Poll the motor and step it if a step is due, implementing
     /// accelerations and decelerations to acheive the target position. You must call this as

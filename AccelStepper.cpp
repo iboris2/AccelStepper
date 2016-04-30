@@ -35,6 +35,11 @@ void AccelStepper::move(long relative)
     moveTo(_currentPos + relative);
 }
 
+void AccelStepper::updateMove(long relative)
+{
+    moveTo(_targetPos + relative);
+}
+
 // Implements steps according to the current step interval
 // You must call this at least once per step
 // returns true if a step occurred
